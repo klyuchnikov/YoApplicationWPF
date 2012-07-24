@@ -464,7 +464,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Ё-приложение 2.1"
         "ProductCode" = "8:{723CDF2D-B7BC-45EC-AD46-7CA3E08737FD}"
-        "PackageCode" = "8:{1A8603F1-752F-4E94-B03F-772297BDE5C4}"
+        "PackageCode" = "8:{CEA96E57-21DF-4A93-BFA5-9F290E8AB36E}"
         "UpgradeCode" = "8:{02C7CF3F-E2BF-4EB5-96A4-6E86549C48C6}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
