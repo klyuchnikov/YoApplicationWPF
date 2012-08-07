@@ -26,9 +26,21 @@ namespace YoApplication
     {
         private BackgroundWorker bw = new BackgroundWorker { WorkerSupportsCancellation = true };
         private bool isExecuteble = false;
+        private YoClass yo = new YoClass();
         public MainWindow()
         {
             InitializeComponent();
+            /*   int Ret; 
+               int Res; 
+               string FontPath; 
+               const int WM_FONTCHANGE = 0x001D; 
+               const int HWND_BROADCAST = 0xffff;
+               var fontFileName = "PFSquareSansPro-Thin.ttf";
+               FontPath = Directory.GetCurrentDirectory() + @"\Fonts\" + fontFileName; 
+               Ret = FontInstall.AddFontResource(FontPath); 
+               Res = FontInstall.SendMessage(HWND_BROADCAST, WM_FONTCHANGE, 0, 0);
+               Ret = FontInstall.WriteProfileString("fonts", "PF Square Sans Pro" + " (TrueType)", fontFileName);*/
+
         }
 
         private void Window_MouseLeftButtonDown_1(object sender, MouseButtonEventArgs e)
@@ -88,6 +100,8 @@ namespace YoApplication
             isExecuteble = false;
             bw.DoWork += delegate
             {
+                //Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
+
                 try
                 {
                     if (isExecuteble)
@@ -95,7 +109,6 @@ namespace YoApplication
                     var list = new List<Run>();
                     foreach (var block in rtb.Document.Blocks)
                         GetChildresRun(block, list);
-                    double TotalMilliseconds = 0;
                     int count = 0;
                     Dispatcher.Invoke(new Action(() =>
                     {
@@ -107,49 +120,20 @@ namespace YoApplication
                     }), DispatcherPriority.Normal, null);
 
                     int value = 0;
+                    List<ExceptionView> listExceptions = new List<ExceptionView>();
                     foreach (var run in list)
                     {
-                        //  Properties.Resources.bases_constu
-                        var basesE = Properties.Resources.basesE_constu.Replace("\r", "").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();// File.ReadAllLines(@"Resource/basesE.constu", Encoding.Default).ToList();
-                        var bases = Properties.Resources.bases_constu.Replace("\r", "").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList(); // File.ReadAllLines(@"Resource/bases.constu", Encoding.Default).ToList();
-                        var chars = "йцукенгшщзхъфывапролджэячсмитьбю";
-                        var qwe = chars.Select(a => new { Letter = a, Arr = new List<string>() });
-                        var letters = new List<string>[32];
-                        var lettersE = new List<string>[32];
-                        for (var i = 0; i < 32; i++)
+                        List<ReplaceWord> wordsExceptions;
+                        var ress = yo.IsContainsException(run.Text, out wordsExceptions);
+                        var str = yo.PasteLetter(run.Text);
+                        foreach (var a in wordsExceptions)
                         {
-                            letters[i] = new List<string>();
-                            lettersE[i] = new List<string>();
+                            var arr = run.Text.GetBlocks();
+                            for (int i = 0; i < arr.Length; i++)
+                                if (arr[i].ToLower() == a.Word)
+                                    arr[i] = string.Format("<Bold>{0}</Bold>", arr[i]);
+                            listExceptions.Add(new ExceptionView { Word = a.Word, Index = a.Index, SourceRun = run, ViewString = string.Join("", arr) });
                         }
-                        for (var i = 0; i < bases.Count; i++)
-                        {
-                            var ind = chars.ToList().IndexOf(bases[i][0]);
-                            letters[ind].Add(bases[i]);
-                            lettersE[ind].Add(basesE[i]);
-                        }
-                        var arr = run.Text.GetBlocks().ToList();//Split(separators.ToCharArray());
-                        var start = DateTime.Now;
-                        for (var i = 0; i < arr.Count; i++)
-                        {
-                            if (chars.Contains(arr[i].ToLower()[0]))
-                            {
-                                var ind = 0;
-                                try
-                                {
-                                    ind = letters[chars.ToList().IndexOf(arr[i].ToLower()[0])].IndexOf(arr[i].ToLower());
-                                }
-                                catch (Exception ee)
-                                { }
-                                if (ind != -1)
-                                {
-                                    arr[i] = lettersE[chars.ToList().IndexOf(arr[i].ToLower()[0])][ind];
-                                    count++;
-                                }
-                            }
-                        }
-                        var end = DateTime.Now;
-                        TotalMilliseconds += (end - start).TotalMilliseconds;
-                        var str = string.Join("", arr.ToArray());
                         Dispatcher.Invoke(new Action(() =>
                         {
                             run.Text = str;
@@ -159,6 +143,9 @@ namespace YoApplication
                     }
                     Dispatcher.Invoke(new Action(() =>
                     {
+                        exceptionsList.ItemsSource = listExceptions;
+                        if (exceptionsGrid.Height == 0 && listExceptions.Count != 0)
+                            (FindResource("excOpen") as Storyboard).Begin();
                         progB.Visibility = System.Windows.Visibility.Hidden;
                         ResMessage.Visibility = System.Windows.Visibility.Visible;
                         ResMessage.Text = string.Format("Заменено {0} слов.", count);
@@ -181,6 +168,13 @@ namespace YoApplication
             };
             bw.RunWorkerAsync();
         }
+        public class ExceptionView
+        {
+            public Run SourceRun { get; set; }
+            public string ViewString { get; set; }
+            public string Word { get; set; }
+            public int Index { get; set; }
+        }
 
         public void GetChildresRun(DependencyObject parent, List<Run> list)
         {
@@ -201,7 +195,61 @@ namespace YoApplication
                 ReplaceButton.Visibility = System.Windows.Visibility.Visible;
             }));
         }
+
+        private void button1_Click(object sender, RoutedEventArgs e)
+        {
+            (FindResource("excClose") as Storyboard).Begin();
+        }
+
+        private void replaceExceptionWord(object sender, RoutedEventArgs e)
+        {
+            var item = ((sender as Button).DataContext as ExceptionView);
+            item.SourceRun.Text = yo.PasteLetterExceptions(item.SourceRun.Text, new ReplaceWord { Word = item.Word, Index = item.Index });
+            (exceptionsList.ItemsSource as List<ExceptionView>).Remove(item);
+            exceptionsList.ItemsSource = new List<ExceptionView>(exceptionsList.ItemsSource as List<ExceptionView>);
+            if ((exceptionsList.ItemsSource as List<ExceptionView>).Count == 0)
+                (FindResource("excClose") as Storyboard).Begin();
+        }
     }
+
+
+    public static class FormattedTextBehavior
+    {
+        public static string GetFormattedText(DependencyObject obj)
+        {
+            return (string)obj.GetValue(FormattedTextProperty);
+        }
+
+        public static void SetFormattedText(DependencyObject obj, string value)
+        {
+            obj.SetValue(FormattedTextProperty, value);
+        }
+
+        public static readonly DependencyProperty FormattedTextProperty =
+            DependencyProperty.RegisterAttached("FormattedText",
+                                                typeof(string),
+                                                typeof(FormattedTextBehavior),
+                                                new UIPropertyMetadata("", FormattedTextChanged));
+
+        private static void FormattedTextChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            TextBlock textBlock = sender as TextBlock;
+            string value = e.NewValue as string;
+            string[] tokens = value.Split(' ');
+            foreach (string token in tokens)
+            {
+                if (token.StartsWith("<Bold>") && token.EndsWith("</Bold>"))
+                {
+                    textBlock.Inlines.Add(new Bold(new Run(token.Replace("<Bold>", "").Replace("</Bold>", "") + " ")));
+                }
+                else
+                {
+                    textBlock.Inlines.Add(new Run(token + " "));
+                }
+            }
+        }
+    }
+
     public static class StringExtentions
     {
         public static string[] GetBlocks(this string s)
