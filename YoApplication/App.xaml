@@ -1,8 +1,113 @@
 ﻿<Application x:Class="YoApplication.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml" Startup="Application_Startup_1">
+             StartupUri="MainWindow.xaml"
+             xmlns:PresentationOptions="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+             Startup="Application_Startup_1">
     <Application.Resources>
-         
+
+        <GeometryGroup x:Key="UpdateIcon">
+            <LineGeometry StartPoint="5,0"
+                          EndPoint="5,10.0" />
+            <LineGeometry StartPoint="4,0"
+                          EndPoint="4,10.0" />
+            <LineGeometry StartPoint="6,0"
+                          EndPoint="6,10.0" />
+            
+            <LineGeometry StartPoint="0,5"
+                          EndPoint="4,10.0" />
+            <LineGeometry StartPoint="1,5"
+                          EndPoint="5,10.0" />
+            <LineGeometry StartPoint="2,5"
+                          EndPoint="5,10.0" />
+            
+            <LineGeometry StartPoint="10,5"
+                          EndPoint="6,10.0" />
+            <LineGeometry StartPoint="9,5"
+                          EndPoint="5,10.0" />
+            <LineGeometry StartPoint="8,5"
+                          EndPoint="4,10.0" />
+        </GeometryGroup>
+        
+        <GeometryGroup x:Key="AdvancedIcon">
+            <EllipseGeometry Center="3,3"
+                             RadiusX="2.5"
+                             RadiusY="2.5" />
+            <EllipseGeometry Center="12,3"
+                             RadiusX="2.5"
+                             RadiusY="2.5" />
+            <EllipseGeometry Center="21,3"
+                             RadiusX="2.5"
+                             RadiusY="2.5" />
+        </GeometryGroup>
+
+        <GeometryGroup x:Key="MinimizeIcon"
+                       FillRule="EvenOdd">
+            <RectangleGeometry Rect="0,0,10,10" />
+            <RectangleGeometry Rect="0,0,10,7" />
+        </GeometryGroup>
+
+        <GeometryGroup x:Key="MaximizeIcon">
+            <LineGeometry StartPoint="0,0.5"
+                          EndPoint="10,0.5" />
+            <LineGeometry StartPoint="0,1.5"
+                          EndPoint="10,1.5" />
+            <LineGeometry StartPoint="0,2.5"
+                          EndPoint="10,2.5" />
+            <LineGeometry StartPoint="0.5,3"
+                          EndPoint="0.5,10" />
+            <LineGeometry StartPoint="9.5,3"
+                          EndPoint="9.5,10" />
+            <LineGeometry StartPoint="1,9.5"
+                          EndPoint="9,9.5" />
+        </GeometryGroup>
+
+        <GeometryGroup x:Key="RestoreIcon">
+            <LineGeometry StartPoint="3,0.5"
+                          EndPoint="10,0.5" />
+            <LineGeometry StartPoint="3,1.5"
+                          EndPoint="10,1.5" />
+            <LineGeometry StartPoint="3.5,2"
+                          EndPoint="3.5,3" />
+            <LineGeometry StartPoint="9.5,2"
+                          EndPoint="9.5,7" />
+            <LineGeometry StartPoint="7,6.5"
+                          EndPoint="10,6.5" />
+            <LineGeometry StartPoint="0,3.5"
+                          EndPoint="7,3.5" />
+            <LineGeometry StartPoint="0,4.5"
+                          EndPoint="7,4.5" />
+            <LineGeometry StartPoint="0.5,5"
+                          EndPoint="0.5,10" />
+            <LineGeometry StartPoint="6.5,5"
+                          EndPoint="6.5,10" />
+            <LineGeometry StartPoint="1,9.5"
+                          EndPoint="6,9.5" />
+        </GeometryGroup>
+
+        <GeometryGroup x:Key="CloseIcon">
+            <LineGeometry StartPoint="1.5,0.5"
+                          EndPoint="9.5,8.5" />
+            <LineGeometry StartPoint="0.5,1.5"
+                          EndPoint="8.5,9.5" />
+            <LineGeometry StartPoint="1.5,1.5"
+                          EndPoint="8.5,8.5" />
+            <LineGeometry StartPoint="8.5,0.5"
+                          EndPoint="0.5,8.5" />
+            <LineGeometry StartPoint="9.5,1.5"
+                          EndPoint="1.5,9.5" />
+            <LineGeometry StartPoint="8.5,1.5"
+                          EndPoint="1.5,8.5" />
+        </GeometryGroup>
+
+        <SolidColorBrush x:Key="Pantone136C"
+                         Color="#f5c433"
+                         PresentationOptions:Freeze="True" />
+        <SolidColorBrush x:Key="PantoneBlack"
+                         Color="Black"
+                         PresentationOptions:Freeze="True" />
+        <SolidColorBrush x:Key="Black-50"
+                         Color="#959595"
+                         PresentationOptions:Freeze="True" />
     </Application.Resources>
 </Application>

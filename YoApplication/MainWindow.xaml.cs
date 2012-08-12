@@ -16,6 +16,7 @@ using System.Windows.Threading;
 using System.Windows.Media.Animation;
 using System.ComponentModel;
 using System.Threading;
+using System.Deployment.Application;
 
 namespace YoApplication
 {
@@ -30,17 +31,42 @@ namespace YoApplication
         public MainWindow()
         {
             InitializeComponent();
-            /*   int Ret; 
-               int Res; 
-               string FontPath; 
-               const int WM_FONTCHANGE = 0x001D; 
-               const int HWND_BROADCAST = 0xffff;
-               var fontFileName = "PFSquareSansPro-Thin.ttf";
-               FontPath = Directory.GetCurrentDirectory() + @"\Fonts\" + fontFileName; 
-               Ret = FontInstall.AddFontResource(FontPath); 
-               Res = FontInstall.SendMessage(HWND_BROADCAST, WM_FONTCHANGE, 0, 0);
-               Ret = FontInstall.WriteProfileString("fonts", "PF Square Sans Pro" + " (TrueType)", fontFileName);*/
+            var timer = new DispatcherTimer();
+            timer.Interval = new TimeSpan(0, 0, 0, 5, 0);
+            timer.Tick += UpdateTick;
+            timer.Start();
+            AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e)
+             {
+                 MessageBox.Show((e.ExceptionObject as Exception).Message);
+             };
+        }
 
+        private void UpdateTick(object sender, EventArgs e)
+        {
+            try
+            {
+                ApplicationDeployment ad = ApplicationDeployment.CurrentDeployment;
+                var info = ApplicationDeployment.CurrentDeployment.CheckForDetailedUpdate();
+                if (info.UpdateAvailable)
+                {
+                    if (!info.IsUpdateRequired)
+                    {
+                        Dispatcher.Invoke(new Action(() =>
+                        {
+                            IsUpdate.Content = "Доступна новая версия: " + info.AvailableVersion.ToString();
+                            IsUpdate.Visibility = System.Windows.Visibility.Visible;
+                            UpdateButton.Visibility = System.Windows.Visibility.Visible;
+                        }), DispatcherPriority.Normal, null);
+                    }
+                }
+                else
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        IsUpdate.Visibility = System.Windows.Visibility.Hidden;
+                        UpdateButton.Visibility = System.Windows.Visibility.Hidden;
+                    }), DispatcherPriority.Normal, null);
+            }
+            catch { }
         }
 
         private void Window_MouseLeftButtonDown_1(object sender, MouseButtonEventArgs e)
@@ -79,15 +105,9 @@ namespace YoApplication
             this.Close();
         }
 
-        private void window_Loaded(object sender, RoutedEventArgs e)
-        {
-            rect.Rect = new Rect(0, 0, Width, Height);
-        }
-
         private void window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-
-            rect.Rect = new Rect(0, 0, ActualWidth, ActualHeight);
+            SetColumnWidth();
         }
 
         private void Image_MouseDown_1(object sender, MouseButtonEventArgs e)
@@ -95,78 +115,94 @@ namespace YoApplication
             System.Diagnostics.Process.Start("http://ulmic.ru");
         }
 
-        private void StackPanel_MouseDown_1(object sender, MouseButtonEventArgs e)
+        void Process()
         {
-            isExecuteble = false;
-            bw.DoWork += delegate
+            try
             {
-                //Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
-
-                try
+                if (isExecuteble)
+                    return;
+                var list = new List<Run>();
+                foreach (var block in rtb.Document.Blocks)
+                    GetChildresRun(block, list);
+                int count = 0;
+                Dispatcher.Invoke(new Action(() =>
                 {
-                    if (isExecuteble)
-                        return;
-                    var list = new List<Run>();
-                    foreach (var block in rtb.Document.Blocks)
-                        GetChildresRun(block, list);
-                    int count = 0;
+                    ReplaceButton.Visibility = System.Windows.Visibility.Hidden;
+                    rtb.IsReadOnly = true;
+                    prog.Width = 0;
+                    progB.Visibility = System.Windows.Visibility.Visible;
+                    ResMessage.Visibility = System.Windows.Visibility.Hidden;
+                }), DispatcherPriority.Normal, null);
+
+                int value = 0;
+                List<ExceptionView> listExceptions = new List<ExceptionView>();
+                foreach (var run in list)
+                {
+                    List<ReplaceWord> wordsExceptions;
+                    string text = null;
                     Dispatcher.Invoke(new Action(() =>
                     {
-                        ReplaceButton.Visibility = System.Windows.Visibility.Hidden;
-                        rtb.IsReadOnly = true;
-                        prog.Width = 0;
-                        progB.Visibility = System.Windows.Visibility.Visible;
-                        ResMessage.Visibility = System.Windows.Visibility.Hidden;
+                        text = run.Text;
                     }), DispatcherPriority.Normal, null);
-
-                    int value = 0;
-                    List<ExceptionView> listExceptions = new List<ExceptionView>();
-                    foreach (var run in list)
+                    var ress = yo.IsContainsException(text, out wordsExceptions);
+                    var str = yo.PasteLetter(text);
+                    foreach (var a in wordsExceptions)
                     {
-                        List<ReplaceWord> wordsExceptions;
-                        var ress = yo.IsContainsException(run.Text, out wordsExceptions);
-                        var str = yo.PasteLetter(run.Text);
-                        foreach (var a in wordsExceptions)
-                        {
-                            var arr = run.Text.GetBlocks();
-                            for (int i = 0; i < arr.Length; i++)
-                                if (arr[i].ToLower() == a.Word)
-                                    arr[i] = string.Format("<Bold>{0}</Bold>", arr[i]);
-                            listExceptions.Add(new ExceptionView { Word = a.Word, Index = a.Index, SourceRun = run, ViewString = string.Join("", arr) });
-                        }
-                        Dispatcher.Invoke(new Action(() =>
-                        {
-                            run.Text = str;
-                            float res = (++value / (float)list.Count);
-                            prog.Width = res * progB.Width;
-                        }), DispatcherPriority.Normal, null);
+                        var arr = text.GetBlocks();
+                        for (int i = 0; i < arr.Length; i++)
+                            if (arr[i].ToLower() == a.Word)
+                                arr[i] = string.Format("<Bold>{0}</Bold>", arr[i]);
+                        listExceptions.Add(new ExceptionView { Word = a.Word, Index = a.Index, SourceRun = run, ViewString = string.Join("", arr) });
                     }
                     Dispatcher.Invoke(new Action(() =>
                     {
-                        exceptionsList.ItemsSource = listExceptions;
-                        if (exceptionsGrid.Height == 0 && listExceptions.Count != 0)
-                            (FindResource("excOpen") as Storyboard).Begin();
-                        progB.Visibility = System.Windows.Visibility.Hidden;
-                        ResMessage.Visibility = System.Windows.Visibility.Visible;
-                        ResMessage.Text = string.Format("Заменено {0} слов.", count);
-                        (FindResource("progressbar") as Storyboard).Begin();
-                        rtb.IsReadOnly = false;
+                        run.Text = str;
+                        float res = (++value / (float)list.Count);
+                        prog.Width = res * progB.Width;
                     }), DispatcherPriority.Normal, null);
-                    isExecuteble = true;
                 }
-                catch (Exception ee)
+                Dispatcher.Invoke(new Action(() =>
                 {
-                    MessageBox.Show(/*ee.Message*/"Возникла ошибка", "Ошибка!");
-                    Dispatcher.Invoke(new Action(() =>
+                    exceptionsList.ItemsSource = listExceptions;
+                    if (exceptionsGrid.Height == 0 && listExceptions.Count != 0)
                     {
-                        progB.Visibility = System.Windows.Visibility.Hidden;
-                        ResMessage.Visibility = System.Windows.Visibility.Hidden;
-                        ReplaceButton.Visibility = System.Windows.Visibility.Visible;
-                        rtb.IsReadOnly = false;
-                    }), DispatcherPriority.Normal, null);
-                }
-            };
-            bw.RunWorkerAsync();
+                        (FindResource("excOpen") as Storyboard).Begin();
+                        SetColumnWidth();
+                    }
+                    progB.Visibility = System.Windows.Visibility.Hidden;
+                    ResMessage.Visibility = System.Windows.Visibility.Visible;
+                    ResMessage.Text = string.Format("Заменено {0} слов.", count);
+                    (FindResource("progressbar") as Storyboard).Begin();
+                    rtb.IsReadOnly = false;
+                }), DispatcherPriority.Normal, null);
+                isExecuteble = true;
+            }
+            catch (Exception ee)
+            {
+                MessageBox.Show("Возникла ошибка", "Ошибка!");
+                Dispatcher.Invoke(new Action(() =>
+                {
+                    progB.Visibility = System.Windows.Visibility.Hidden;
+                    ResMessage.Visibility = System.Windows.Visibility.Hidden;
+                    ReplaceButton.Visibility = System.Windows.Visibility.Visible;
+                    rtb.IsReadOnly = false;
+                }), DispatcherPriority.Normal, null);
+            }
+        }
+
+        private void SetColumnWidth()
+        {
+            var width1 = (exceptionsList.View as GridView).Columns[1].ActualWidth;
+            var width2 = (exceptionsList.View as GridView).Columns[2].ActualWidth;
+            (exceptionsList.View as GridView).Columns[0].Width = exceptionsList.ActualWidth - width1 - width2 - 45;
+        }
+
+        private void StackPanel_MouseDown_1(object sender, RoutedEventArgs e)
+        {
+            isExecuteble = false;
+            var tread = new Thread(Process);
+            tread.SetApartmentState(ApartmentState.STA);
+            tread.Start();
         }
         public class ExceptionView
         {
@@ -184,7 +220,6 @@ namespace YoApplication
                     list.Add(child as Run);
                 else
                     GetChildresRun(child, list);
-
             }
         }
 
@@ -210,84 +245,25 @@ namespace YoApplication
             if ((exceptionsList.ItemsSource as List<ExceptionView>).Count == 0)
                 (FindResource("excClose") as Storyboard).Begin();
         }
-    }
 
-
-    public static class FormattedTextBehavior
-    {
-        public static string GetFormattedText(DependencyObject obj)
+        private void UpdateButton_Click(object sender, MouseButtonEventArgs e)
         {
-            return (string)obj.GetValue(FormattedTextProperty);
-        }
-
-        public static void SetFormattedText(DependencyObject obj, string value)
-        {
-            obj.SetValue(FormattedTextProperty, value);
-        }
-
-        public static readonly DependencyProperty FormattedTextProperty =
-            DependencyProperty.RegisterAttached("FormattedText",
-                                                typeof(string),
-                                                typeof(FormattedTextBehavior),
-                                                new UIPropertyMetadata("", FormattedTextChanged));
-
-        private static void FormattedTextChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
-        {
-            TextBlock textBlock = sender as TextBlock;
-            string value = e.NewValue as string;
-            string[] tokens = value.Split(' ');
-            foreach (string token in tokens)
+            try
             {
-                if (token.StartsWith("<Bold>") && token.EndsWith("</Bold>"))
+                ApplicationDeployment.CurrentDeployment.UpdateCompleted += delegate
                 {
-                    textBlock.Inlines.Add(new Bold(new Run(token.Replace("<Bold>", "").Replace("</Bold>", "") + " ")));
-                }
-                else
-                {
-                    textBlock.Inlines.Add(new Run(token + " "));
-                }
-            }
-        }
-    }
-
-    public static class StringExtentions
-    {
-        public static string[] GetBlocks(this string s)
-        {
-            string separators = " '.,!:;?\n\r\t()-\'\"";
-            var list = new List<string>();
-            for (var i = 0; i < s.Length; i++)
-            {
-                if (!separators.Contains(s[i]))
-                {
-                    var countCharNotSeparators = 0;
-                    while (!separators.Contains(s[i + countCharNotSeparators]))
+                    Dispatcher.Invoke(new Action(() =>
                     {
-                        countCharNotSeparators++;
-                        if (i + countCharNotSeparators >= s.Length)
-                            break;
-                    }
-                    if (countCharNotSeparators != 0)
-                        list.Add(s.Substring(i, countCharNotSeparators));
-                    if (countCharNotSeparators != 0)
-                        i += countCharNotSeparators - 1;
-                }
-                else
-                {
-                    var countCharSeparators = 0;
-                    while (separators.Contains(s[i + countCharSeparators]))
-                    {
-                        countCharSeparators++;
-                        if (i + countCharSeparators >= s.Length)
-                            break;
-                    }
-                    if (countCharSeparators != 0)
-                        list.Add(s.Substring(i, countCharSeparators));
-                    if (countCharSeparators != 0)
-                        i += countCharSeparators - 1;
-                }
+                        IsUpdate.Content = "Программа обновлена. Требуется перегрузка.";
+                        MessageBox.Show("Программа была обновлена. Ё-приложение будет перегружено...");
+                        System.Diagnostics.Process.Start(Application.ResourceAssembly.Location);
+                        Application.Current.Shutdown();
+                    }), DispatcherPriority.Normal, null);
+                };
+                IsUpdate.Content = "...Обновление";
+                ApplicationDeployment.CurrentDeployment.UpdateAsync();
             }
-            return list.ToArray(); ;
+            catch { }
         }
     }
 }
